@@ -10,6 +10,8 @@ export interface TleRecord extends SatelliteSummary {
   epoch: string;
 }
 
+export type SatelliteDetail = TleRecord;
+
 export interface TrackPoint {
   time: string;
   lat: number;
@@ -62,6 +64,7 @@ async function get<T>(path: string): Promise<T> {
 export const api = {
   satellites: (search: string, limit = 20) =>
     get<SatelliteSummary[]>(`/satellites?search=${encodeURIComponent(search)}&limit=${limit}`),
+  detail: (noradId: number) => get<SatelliteDetail>(`/satellites/${noradId}`),
   tles: (group?: string) => get<TleRecord[]>(`/tles${group ? `?group=${group}` : ""}`),
   position: (noradId: number) => get<Position>(`/satellites/${noradId}/position`),
   groundtrack: (noradId: number, minutes = 180) =>

@@ -3,6 +3,7 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from "react-le
 import { useQuery } from "@tanstack/react-query";
 import { api, type SatelliteSummary } from "../api";
 import SatelliteSearch from "../components/SatelliteSearch";
+import SatDetails, { deriveOrbit } from "../components/SatDetails";
 
 const ISS: SatelliteSummary = { norad_id: 25544, name: "ISS (ZARYA)", group_name: "stations" };
 
@@ -37,6 +38,17 @@ export default function MapPage() {
     refetchInterval: 5_000,
   });
 
+  const { data: detail } = useQuery({
+    queryKey: ["detail", sat.norad_id],
+    queryFn: () => api.detail(sat.norad_id),
+    staleTime: 30 * 60_000,
+  });
+
+  const orbit = useMemo(
+    () => (detail ? deriveOrbit(detail.line1, detail.line2) : null),
+    [detail]
+  );
+
   const segments = useMemo(
     () => (track ? splitAtAntimeridian(track.points) : []),
     [track]
@@ -60,11 +72,21 @@ export default function MapPage() {
             pathOptions={{ color: "#ff5252", fillColor: "#ff5252", fillOpacity: 0.9 }}
           >
             <Popup>
-              <b>{pos.name}</b>
+              <b>{pos.name}</b> #{pos.norad_id}
               <br />
               lat {pos.lat.toFixed(2)}° · lon {pos.lon.toFixed(2)}°
               <br />
               alt {pos.alt_km.toFixed(0)} km
+              {orbit && (
+                <>
+                  <br />
+                  {orbit.orbitClass}
+                  <br />
+                  period {orbit.periodMin.toFixed(1)} min · incl {orbit.inclinationDeg.toFixed(1)}°
+                  <br />
+                  apogee {orbit.apogeeKm.toFixed(0)} km · perigee {orbit.perigeeKm.toFixed(0)} km
+                </>
+              )}
             </Popup>
           </CircleMarker>
         )}
@@ -72,15 +94,21 @@ export default function MapPage() {
       <div className="panel">
         <h3>Ground track (±90 min)</h3>
         <SatelliteSearch selected={sat} onSelect={setSat} />
-        <div className="telemetry">
-          <b>{sat.name}</b> #{sat.norad_id}
-          {pos && (
-            <>
-              <br />lat {pos.lat.toFixed(2)}° · lon {pos.lon.toFixed(2)}°
-              <br />alt {pos.alt_km.toFixed(0)} km
-            </>
-          )}
-        </div>
+        {detail ? (
+          <SatDetails
+            norad_id={detail.norad_id}
+            name={detail.name}
+            group_name={detail.group_name || undefined}
+            line1={detail.line1}
+            line2={detail.line2}
+          />
+        ) : (
+          <div className="telemetry">
+            <b>{sat.name}</b> #{sat.norad_id}
+            <br />
+            <span className="muted">loading orbital data…</span>
+          </div>
+        )}
       </div>
     </div>
   );

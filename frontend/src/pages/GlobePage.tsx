@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import Globe from "react-globe.gl";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Globe, { type GlobeMethods } from "react-globe.gl";
 import { gstime, propagate, twoline2satrec, eciToGeodetic, degreesLat, degreesLong } from "satellite.js";
 import { useQuery } from "@tanstack/react-query";
 import { api, type SatelliteSummary } from "../api";
 import SatelliteSearch from "../components/SatelliteSearch";
+import SatDetails from "../components/SatDetails";
 
 const EARTH_RADIUS_KM = 6371;
+const GLOBE_RADIUS = 100; // three-globe internal globe radius
+const PICK_RADIUS_PX = 15;
 
 interface SatPoint {
   norad_id: number;
@@ -18,6 +21,9 @@ interface SatPoint {
 
 export default function GlobePage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const globeRef = useRef<GlobeMethods | undefined>(undefined);
+  const pointsRef = useRef<SatPoint[]>([]);
+  const downPos = useRef<{ x: number; y: number } | null>(null);
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight - 50 });
   const [group, setGroup] = useState("stations");
   const [selected, setSelected] = useState<SatelliteSummary | null>(null);
@@ -72,6 +78,7 @@ export default function GlobePage() {
         });
       }
       setPoints(next);
+      pointsRef.current = next;
     };
 
     tick();
@@ -79,14 +86,86 @@ export default function GlobePage() {
     return () => clearInterval(id);
   }, [satrecs]);
 
+  // Screen-space picking: nearest visible satellite within PICK_RADIUS_PX of the click.
+  // The particles layer's own raycast threshold is too strict for 2.5px dots.
+  const pickSatellite = useCallback((clickX: number, clickY: number): SatPoint | null => {
+    const globe = globeRef.current;
+    if (!globe) return null;
+    const cam = globe.camera().position;
+    const camLen2 = cam.x * cam.x + cam.y * cam.y + cam.z * cam.z;
+    let best: SatPoint | null = null;
+    let bestDist = PICK_RADIUS_PX;
+    for (const p of pointsRef.current) {
+      const s = globe.getScreenCoords(p.lat, p.lng, p.alt);
+      const dx = s.x - clickX;
+      const dy = s.y - clickY;
+      if (Math.abs(dx) > bestDist || Math.abs(dy) > bestDist) continue;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist >= bestDist) continue;
+      // occlusion: skip satellites hidden behind the globe sphere
+      const w = globe.getCoords(p.lat, p.lng, p.alt);
+      const dxw = w.x - cam.x;
+      const dyw = w.y - cam.y;
+      const dzw = w.z - cam.z;
+      const a = dxw * dxw + dyw * dyw + dzw * dzw;
+      const b = 2 * (cam.x * dxw + cam.y * dyw + cam.z * dzw);
+      const c = camLen2 - GLOBE_RADIUS * GLOBE_RADIUS;
+      const disc = b * b - 4 * a * c;
+      if (disc > 0) {
+        const t = (-b - Math.sqrt(disc)) / (2 * a);
+        if (t > 0 && t < 0.999) continue; // globe surface sits between camera and satellite
+      }
+      best = p;
+      bestDist = dist;
+    }
+    return best;
+  }, []);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!(e.target instanceof HTMLCanvasElement)) return;
+      // ignore drag-rotate releases
+      if (downPos.current && Math.hypot(e.clientX - downPos.current.x, e.clientY - downPos.current.y) > 5) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const hit = pickSatellite(e.clientX - rect.left, e.clientY - rect.top);
+      if (hit) {
+        setSelected({
+          norad_id: hit.norad_id,
+          name: hit.name,
+          group_name: "",
+        });
+      }
+    },
+    [pickSatellite]
+  );
+
   const selectedPoint = useMemo(
     () => points.find((p) => p.norad_id === selected?.norad_id),
     [points, selected]
   );
 
+  // TLE for the selected sat: from the loaded set, else fetched on demand
+  const localTle = useMemo(
+    () => tles?.find((t) => t.norad_id === selected?.norad_id),
+    [tles, selected]
+  );
+  const { data: fetchedTle } = useQuery({
+    queryKey: ["detail", selected?.norad_id],
+    queryFn: () => api.detail(selected!.norad_id),
+    enabled: !!selected && !localTle,
+    staleTime: 30 * 60_000,
+  });
+  const selectedTle = localTle ?? (fetchedTle?.norad_id === selected?.norad_id ? fetchedTle : undefined);
+
   return (
-    <div ref={containerRef} style={{ height: "100%", overflow: "hidden" }}>
+    <div
+      ref={containerRef}
+      style={{ height: "100%", overflow: "hidden" }}
+      onMouseDown={(e) => (downPos.current = { x: e.clientX, y: e.clientY })}
+      onClick={handleClick}
+    >
       <Globe
+        ref={globeRef}
         width={size.w}
         height={size.h}
         globeImageUrl="/textures/earth-night.jpg"
@@ -113,26 +192,27 @@ export default function GlobePage() {
           <option value="all">Full catalog</option>
         </select>
         <span className="muted" style={{ fontSize: "0.8rem" }}>
-          {points.length.toLocaleString()} objects on globe
+          {points.length.toLocaleString()} objects on globe — click one for details
         </span>
         <h3 style={{ marginTop: "0.8rem" }}>Track a satellite</h3>
         <SatelliteSearch selected={selected} onSelect={setSelected} />
-        {selected && (
-          <div className="telemetry">
-            <b>{selected.name}</b> #{selected.norad_id}
-            {selectedPoint ? (
-              <>
-                <br />lat {selectedPoint.lat.toFixed(2)}° · lon {selectedPoint.lng.toFixed(2)}°
-                <br />alt {selectedPoint.alt_km.toFixed(0)} km
-              </>
-            ) : (
-              <>
-                <br />
-                <span className="muted">not in current globe set — switch to full catalog</span>
-              </>
-            )}
-          </div>
-        )}
+        {selected &&
+          (selectedTle ? (
+            <SatDetails
+              norad_id={selectedTle.norad_id}
+              name={selectedTle.name}
+              group_name={selectedTle.group_name || undefined}
+              line1={selectedTle.line1}
+              line2={selectedTle.line2}
+              onClose={() => setSelected(null)}
+            />
+          ) : (
+            <div className="telemetry">
+              <b>{selected.name}</b> #{selected.norad_id}
+              <br />
+              <span className="muted">loading orbital data…</span>
+            </div>
+          ))}
       </div>
     </div>
   );

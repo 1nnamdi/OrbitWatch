@@ -39,6 +39,7 @@ Build the pipeline once for satellites, then reuse it for each new domain.
 | ✅ | Expand to full CelesTrak catalog (~30k objects) | ~16k active objects ingested |
 | ✅ | Pass predictions ("when is X overhead?") | `/passes` endpoint + UI page |
 | ✅ | 3D globe (CesiumJS or Globe.gl) | react-globe.gl, client-side satellite.js propagation, 16k live objects |
+| ✅ | Click-to-inspect satellite details | Click any globe dot → full panel: live telemetry, identity, orbital elements, TLE epoch (also on map page) |
 | 🔲 | Space-Track.org integration | Free account; richer history, decay/re-entry data |
 | 🔲 | Launch tracker (Launch Library 2 API) | Upcoming launches feed |
 | 🔲 | Maneuver/anomaly detection | Diff TLE history — spot spy sat maneuvers |
