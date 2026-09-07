@@ -70,6 +70,21 @@ export interface OrbitalEvent {
   detected_at: string;
 }
 
+export interface Launch {
+  id: string;
+  name: string;
+  provider: string;
+  mission: string | null;
+  mission_type: string | null;
+  status: string;
+  status_name: string;
+  net: string;
+  window_start: string | null;
+  window_end: string | null;
+  pad: string | null;
+  location: string | null;
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`/api${path}`);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -88,5 +103,6 @@ export const api = {
     get<Passes>(`/satellites/${noradId}/passes?lat=${lat}&lon=${lon}&hours=${hours}`),
   events: (minScore?: number, limit = 200) =>
     get<OrbitalEvent[]>(`/events?limit=${limit}${minScore ? `&min_score=${minScore}` : ""}`),
+  launches: () => get<Launch[]>("/launches"),
   stats: () => get<Stats>("/stats"),
 };

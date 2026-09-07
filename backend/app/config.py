@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://orbitwatch:orbitwatch@localhost:5432/orbitwatch"
     celestrak_groups: str = "stations,active"
     ingest_interval_hours: float = 2.0
+    launches_interval_hours: float = 1.0  # LL2 free tier: 15 req/hour
     cors_origins: str = "http://localhost:5173"
 
     @property

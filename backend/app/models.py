@@ -65,3 +65,23 @@ class AnalysisState(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
     last_tle_id: Mapped[int] = mapped_column(server_default="0")
+
+
+class Launch(Base):
+    __tablename__ = "launches"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # LL2 UUID
+    name: Mapped[str] = mapped_column(String(200))
+    provider: Mapped[str] = mapped_column(String(120))
+    mission: Mapped[str | None] = mapped_column(String(200))
+    mission_type: Mapped[str | None] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(24))
+    status_name: Mapped[str] = mapped_column(String(64))
+    net: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    window_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    window_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    pad: Mapped[str | None] = mapped_column(String(120))
+    location: Mapped[str | None] = mapped_column(String(120))
+    image_url: Mapped[str | None] = mapped_column(String(300))
+    last_updated: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

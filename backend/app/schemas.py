@@ -87,3 +87,26 @@ class EventOut(BaseModel):
 class AnalyzeResult(BaseModel):
     pairs_checked: int
     events_created: int
+
+
+class LaunchOut(BaseModel):
+    id: str
+    name: str
+    provider: str
+    mission: str | None
+    mission_type: str | None
+    status: str
+    status_name: str
+    net: datetime
+    window_start: datetime | None
+    window_end: datetime | None
+    pad: str | None
+    location: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class LaunchIngestResult(BaseModel):
+    fetched: int
+    created: int
+    updated: int

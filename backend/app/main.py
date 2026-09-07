@@ -5,11 +5,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import events, ingest, satellites, tiles
+from .api import events, ingest, launches, satellites, tiles
 from .config import settings
 from .db import SessionLocal
 from .services import maneuvers
-from .sources import celestrak
+from .sources import celestrak, launchlibrary
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,6 +33,16 @@ def scheduled_ingest():
         db.close()
 
 
+def scheduled_launch_ingest():
+    db = SessionLocal()
+    try:
+        launchlibrary.ingest_upcoming(db)
+    except Exception:
+        logger.exception("Scheduled launch ingest failed")
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     scheduler = BackgroundScheduler()
@@ -42,6 +52,13 @@ async def lifespan(app: FastAPI):
         hours=settings.ingest_interval_hours,
         jitter=300,
         id="celestrak_ingest",
+    )
+    scheduler.add_job(
+        scheduled_launch_ingest,
+        "interval",
+        hours=settings.launches_interval_hours,
+        jitter=300,
+        id="ll2_ingest",
     )
     scheduler.start()
     yield
@@ -61,6 +78,7 @@ app.include_router(satellites.router)
 app.include_router(ingest.router)
 app.include_router(tiles.router)
 app.include_router(events.router)
+app.include_router(launches.router)
 
 
 @app.get("/")
