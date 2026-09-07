@@ -83,6 +83,8 @@ export interface Launch {
   window_end: string | null;
   pad: string | null;
   location: string | null;
+  pad_lat: number | null;
+  pad_lon: number | null;
 }
 
 async function get<T>(path: string): Promise<T> {

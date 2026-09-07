@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Launch } from "../api";
 
-const STATUS_COLORS: Record<string, string> = {
+export const STATUS_COLORS: Record<string, string> = {
   Go: "#66bb6a",
   Success: "#4fc3f7",
   Failure: "#ff5252",
@@ -23,7 +23,7 @@ function fmt(iso: string) {
   });
 }
 
-function countdown(net: string, now: number) {
+export function countdown(net: string, now: number) {
   const diff = new Date(net).getTime() - now;
   if (diff <= 0) return "launched";
   const d = Math.floor(diff / 86_400_000);

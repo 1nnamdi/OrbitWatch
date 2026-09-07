@@ -82,6 +82,8 @@ class Launch(Base):
     window_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     pad: Mapped[str | None] = mapped_column(String(120))
     location: Mapped[str | None] = mapped_column(String(120))
+    pad_lat: Mapped[float | None]
+    pad_lon: Mapped[float | None]
     image_url: Mapped[str | None] = mapped_column(String(300))
     last_updated: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

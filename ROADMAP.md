@@ -41,7 +41,7 @@ Build the pipeline once for satellites, then reuse it for each new domain.
 | ✅ | 3D globe (CesiumJS or Globe.gl) | react-globe.gl, client-side satellite.js propagation, 16k live objects |
 | ✅ | Click-to-inspect satellite details | Click any globe dot → full panel: live telemetry, identity, orbital elements, TLE epoch (also on map page) |
 | 🔲 | Space-Track.org integration | Free account; richer history, decay/re-entry data |
-| 🔲 | Launch tracker (Launch Library 2 API) | Upcoming launches feed |
+| ✅ | Launch tracker (Launch Library 2 API) | `launches` table, hourly LL2 ingest, /api/launches + Launches UI page with live countdowns; pads plotted on globe (pulse rings + labels) with launch dropdown → fly-to + info card |
 | ✅ | Maneuver/anomaly detection | Diffs consecutive TLEs (ΔSMA/Δinc/Δecc), `orbital_events` table, /api/events + Events UI page; runs after each ingest |
 | 🔲 | Re-entry prediction dashboard | Decay trends |
 | 🔲 | Constellation growth visualizer | Starlink et al. over time |
@@ -110,6 +110,7 @@ Build the pipeline once for satellites, then reuse it for each new domain.
 
 - 2026-09-07: Phase 0 + most of Phase 1 built and verified end-to-end. Backend on :8800 (docs at /docs), 16k sats ingested, ISS position/passes verified. Frontend on :5173 (globe / ground track / passes all working). Corporate-network workarounds: backend tile proxy (`/api/tiles`) because content filter blocks direct tile <img> loads; globe textures self-hosted in `frontend/public/textures/`.
 - 2026-09-07: Maneuver detection live. Thresholds (v1, in `services/maneuvers.py`): |ΔSMA| > 0.5 km, |Δinc| > 0.01°, |Δecc| > 1e-4; SMA increases weighted 2× (drag only lowers orbits); pairs with epoch gap > 30 d skipped. Watermark on `tle_history.id` in `analysis_state`. Verified with synthetic ISS TLE (Δinc +0.05° → score 10.85 HIGH). Real events will appear as history accumulates (ISS reboosts every few weeks). Tune thresholds after ~1 week of data.
+- 2026-09-07: Launch tracker live. LL2 normal mode (has pad lat/lon), upsert by LL2 UUID, hourly scheduled ingest (free tier: 15 req/h), manual trigger `POST /api/ingest/launches`. `GET /api/launches` includes launches up to 24 h past NET. UI: /launches with per-second countdowns; globe plots pads as pulsing rings + labels with a launch dropdown (fly-to + countdown card). Launch images skipped (content filter blocks CDN <img>; proxy via backend if wanted later).
 
 ### How to run
 

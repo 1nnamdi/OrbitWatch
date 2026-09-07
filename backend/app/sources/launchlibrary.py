@@ -20,15 +20,22 @@ def _dt(value: str | None) -> datetime | None:
 
 
 def fetch_upcoming(limit: int = 50, timeout: float = 60.0) -> list[dict]:
-    # mode=list keeps the payload flat and small; free tier allows 15 req/hour
+    # normal mode (not mode=list) because it carries pad coordinates; free tier allows 15 req/hour
     resp = httpx.get(
         LL2_URL,
-        params={"limit": limit, "mode": "list"},
+        params={"limit": limit},
         timeout=timeout,
         follow_redirects=True,
     )
     resp.raise_for_status()
     return resp.json()["results"]
+
+
+def _float(value) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def ingest_upcoming(db: Session, limit: int = 50) -> tuple[int, int, int]:
@@ -42,18 +49,23 @@ def ingest_upcoming(db: Session, limit: int = 50) -> tuple[int, int, int]:
     created = updated = 0
     now = datetime.now(timezone.utc)
     for r in results:
+        mission = r.get("mission") or {}
+        pad = r.get("pad") or {}
+        location = pad.get("location") or {}
         fields = dict(
             name=r["name"][:200],
-            provider=(r.get("lsp_name") or "Unknown")[:120],
-            mission=(r.get("mission") or None) and r["mission"][:200],
-            mission_type=(r.get("mission_type") or None) and r["mission_type"][:64],
+            provider=((r.get("launch_service_provider") or {}).get("name") or "Unknown")[:120],
+            mission=(mission.get("name") or None) and mission["name"][:200],
+            mission_type=(mission.get("type") or None) and mission["type"][:64],
             status=r["status"]["abbrev"][:24],
             status_name=r["status"]["name"][:64],
             net=_dt(r["net"]),
             window_start=_dt(r.get("window_start")),
             window_end=_dt(r.get("window_end")),
-            pad=(r.get("pad") or None) and r["pad"][:120],
-            location=(r.get("location") or None) and r["location"][:120],
+            pad=(pad.get("name") or None) and pad["name"][:120],
+            location=(location.get("name") or None) and location["name"][:120],
+            pad_lat=_float(pad.get("latitude")),
+            pad_lon=_float(pad.get("longitude")),
             image_url=(r.get("image") or None) and r["image"][:300],
             last_updated=_dt(r.get("last_updated")),
         )

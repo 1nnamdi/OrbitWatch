@@ -102,6 +102,8 @@ class LaunchOut(BaseModel):
     window_end: datetime | None
     pad: str | None
     location: str | None
+    pad_lat: float | None
+    pad_lon: float | None
 
     model_config = {"from_attributes": True}
 
