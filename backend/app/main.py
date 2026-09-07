@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
@@ -46,18 +47,22 @@ def scheduled_launch_ingest():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     scheduler = BackgroundScheduler()
+    # kick both ingests shortly after startup instead of waiting a full interval
+    startup_kick = datetime.now(timezone.utc) + timedelta(seconds=30)
     scheduler.add_job(
         scheduled_ingest,
         "interval",
         hours=settings.ingest_interval_hours,
         jitter=300,
         id="celestrak_ingest",
+        next_run_time=startup_kick,
     )
     scheduler.add_job(
         scheduled_launch_ingest,
         "interval",
         hours=settings.launches_interval_hours,
         jitter=300,
+        next_run_time=startup_kick,
         id="ll2_ingest",
     )
     scheduler.start()
