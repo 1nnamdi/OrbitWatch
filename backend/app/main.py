@@ -5,7 +5,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import ingest, satellites
+from .api import ingest, satellites, tiles
 from .config import settings
 from .db import SessionLocal
 from .sources import celestrak
@@ -51,6 +51,7 @@ app.add_middleware(
 
 app.include_router(satellites.router)
 app.include_router(ingest.router)
+app.include_router(tiles.router)
 
 
 @app.get("/")

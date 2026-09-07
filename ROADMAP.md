@@ -22,23 +22,23 @@ Build the pipeline once for satellites, then reuse it for each new domain.
 
 | Status | Task | Notes |
 |--------|------|-------|
-| 🔲 | Decide core stack | Proposed: Python + FastAPI, SQLite → PostgreSQL, frontend TBD |
-| 🔲 | Repo scaffolding | `backend/`, `frontend/`, `data/`, config, `.gitignore`, deps |
-| 🔲 | Generic ingestion framework | Base "source" abstraction: fetch → normalize → store, with scheduling |
-| 🔲 | Database schema v1 | Sources, entities, observations (time-series), events/alerts |
+| ✅ | Decide core stack | Python + FastAPI + PostgreSQL (Docker), React + Vite frontend |
+| ✅ | Repo scaffolding | `backend/`, `frontend/`, docker-compose, `.env.example`, `.gitignore` |
+| ✅ | Generic ingestion framework | CelesTrak source + APScheduler (2h interval); more sources plug in later |
+| ✅ | Database schema v1 | `satellites` + `tle_history` via Alembic |
 | 🔲 | Dev tooling | Linting, tests, run scripts |
 
 ## Phase 1 — Space 🛰️ (first vertical slice)
 
 | Status | Task | Notes |
 |--------|------|-------|
-| 🔲 | Fetch ISS TLE from CelesTrak | No auth needed; the "hello world" of the pipeline |
-| 🔲 | Store TLE history | Keep every snapshot — history enables maneuver detection later |
-| 🔲 | Propagate position with SGP4 (`skyfield`) | Current lat/lon/alt + ground track |
-| 🔲 | 2D ground-track map | First visual! |
-| 🔲 | Expand to full CelesTrak catalog (~30k objects) | Batch ingest, groups: stations, Starlink, debris |
-| 🔲 | Pass predictions ("when is X overhead?") | User location → next passes |
-| 🔲 | 3D globe (CesiumJS or Globe.gl) | Live positions on a globe |
+| ✅ | Fetch ISS TLE from CelesTrak | Done via `stations` group ingest |
+| ✅ | Store TLE history | Every new epoch stored; dedup on (norad_id, epoch) |
+| ✅ | Propagate position with SGP4 (`skyfield`) | `/position`, `/groundtrack` endpoints |
+| ✅ | 2D ground-track map | Leaflet + Esri dark tiles via backend tile proxy |
+| ✅ | Expand to full CelesTrak catalog (~30k objects) | ~16k active objects ingested |
+| ✅ | Pass predictions ("when is X overhead?") | `/passes` endpoint + UI page |
+| ✅ | 3D globe (CesiumJS or Globe.gl) | react-globe.gl, client-side satellite.js propagation, 16k live objects |
 | 🔲 | Space-Track.org integration | Free account; richer history, decay/re-entry data |
 | 🔲 | Launch tracker (Launch Library 2 API) | Upcoming launches feed |
 | 🔲 | Maneuver/anomaly detection | Diff TLE history — spot spy sat maneuvers |
@@ -100,6 +100,20 @@ Build the pipeline once for satellites, then reuse it for each new domain.
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-09-07 | Start with space domain | Fits the name; free no-auth data (CelesTrak); teaches the full pipeline |
+| 2026-09-07 | FastAPI + PostgreSQL (Docker) + React/Vite + Globe.gl | Chosen over SQLite/plain-JS starters |
+| 2026-09-07 | Client-side propagation (satellite.js) for globe animation | Smooth updates without hammering the API; backend stays source of truth |
+| 2026-09-07 | Python deps via `pip install --user`, frontend runs in Docker (MCR node image) | Group policy blocks venv/npx executables in project dirs; Docker Hub blocked by proxy → use mcr.microsoft.com |
+| 2026-09-07 | Backend on port 8800 | Port 8000 reserved by Windows port exclusions |
+
+## Working Notes
+
+- 2026-09-07: Phase 0 + most of Phase 1 built and verified end-to-end. Backend on :8800 (docs at /docs), 16k sats ingested, ISS position/passes verified. Frontend on :5173 (globe / ground track / passes all working). Corporate-network workarounds: backend tile proxy (`/api/tiles`) because content filter blocks direct tile <img> loads; globe textures self-hosted in `frontend/public/textures/`.
+
+### How to run
+
+1. `docker compose up -d db frontend`
+2. `python -m uvicorn app.main:app --port 8800 --app-dir backend --reload` (deps installed via `pip install --user`)
+3. Open http://localhost:5173 — ingest via `POST /api/ingest/celestrak?group=active` (also auto-runs every 2h)
 
 ## Data Sources Reference
 
@@ -113,7 +127,3 @@ Build the pipeline once for satellites, then reuse it for each new domain.
 | Maritime | [AISStream.io](https://aisstream.io) | Free API key | AIS websocket |
 | Earth | [USGS Earthquakes](https://earthquake.usgs.gov) | None | GeoJSON feeds |
 | Earth | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov) | Free key | Fires |
-
-## Working Notes
-
-- (add session-by-session notes here as we build)
