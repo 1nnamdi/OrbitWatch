@@ -87,6 +87,54 @@ export interface Launch {
   pad_lon: number | null;
 }
 
+export interface ReentryPrediction {
+  norad_id: number;
+  object_name: string;
+  intl_des: string | null;
+  rcs_size: string | null;
+  country: string | null;
+  msg_epoch: string;
+  decay_epoch: string;
+  source: string | null;
+  msg_type: string;
+}
+
+export interface DecayTrend {
+  norad_id: number;
+  name: string;
+  group_name: string;
+  epoch: string;
+  sma_km: number;
+  perigee_km: number;
+  apogee_km: number;
+  bstar: number;
+  points: number;
+  decay_rate_km_day: number;
+  est_days_left: number | null;
+  est_reentry: string | null;
+}
+
+export interface ConstellationSummary {
+  prefix: string;
+  label: string;
+  total: number;
+  on_orbit: number;
+  decayed: number;
+}
+
+export interface GrowthPoint {
+  month: string;
+  launched: number;
+  decayed: number;
+  on_orbit: number;
+}
+
+export interface ConstellationGrowth {
+  prefix: string;
+  label: string;
+  points: GrowthPoint[];
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`/api${path}`);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -106,5 +154,11 @@ export const api = {
   events: (minScore?: number, limit = 200) =>
     get<OrbitalEvent[]>(`/events?limit=${limit}${minScore ? `&min_score=${minScore}` : ""}`),
   launches: () => get<Launch[]>("/launches"),
+  reentries: () => get<ReentryPrediction[]>("/reentries"),
+  reentryTrends: (maxPerigeeKm = 300) =>
+    get<DecayTrend[]>(`/reentries/trends?max_perigee_km=${maxPerigeeKm}`),
+  constellations: () => get<ConstellationSummary[]>("/constellations"),
+  constellationGrowth: (prefix: string) =>
+    get<ConstellationGrowth>(`/constellations/${prefix}/growth`),
   stats: () => get<Stats>("/stats"),
 };

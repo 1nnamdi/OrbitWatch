@@ -1,8 +1,15 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # accept .env at repo root or backend/, regardless of uvicorn CWD
+    model_config = SettingsConfigDict(
+        env_file=(_REPO_ROOT / ".env", _REPO_ROOT / "backend" / ".env"), extra="ignore"
+    )
 
     database_url: str = "postgresql+psycopg://orbitwatch:orbitwatch@localhost:5432/orbitwatch"
     celestrak_groups: str = "stations,active"

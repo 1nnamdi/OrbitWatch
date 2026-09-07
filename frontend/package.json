@@ -16,6 +16,7 @@
     "react-globe.gl": "^2.36.0",
     "react-leaflet": "^4.2.1",
     "react-router-dom": "^6.26.0",
+    "recharts": "^2.13.3",
     "satellite.js": "^5.0.0"
   },
   "devDependencies": {
