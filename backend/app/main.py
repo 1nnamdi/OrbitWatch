@@ -6,11 +6,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import events, ingest, launches, satellites, tiles
+from .api import constellations, events, ingest, launches, reentries, satellites, tiles
 from .config import settings
 from .db import SessionLocal
 from .services import maneuvers
-from .sources import celestrak, launchlibrary
+from .sources import celestrak, launchlibrary, spacetrack
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,6 +44,18 @@ def scheduled_launch_ingest():
         db.close()
 
 
+def scheduled_spacetrack_ingest():
+    db = SessionLocal()
+    try:
+        with spacetrack.SpaceTrackClient() as st:
+            spacetrack.ingest_decay(db, st)
+            spacetrack.ingest_satcat(db, st)
+    except Exception:
+        logger.exception("Scheduled Space-Track ingest failed")
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     scheduler = BackgroundScheduler()
@@ -65,6 +77,17 @@ async def lifespan(app: FastAPI):
         next_run_time=startup_kick,
         id="ll2_ingest",
     )
+    if spacetrack.enabled():
+        scheduler.add_job(
+            scheduled_spacetrack_ingest,
+            "interval",
+            hours=settings.spacetrack_interval_hours,
+            jitter=300,
+            next_run_time=startup_kick + timedelta(seconds=60),
+            id="spacetrack_ingest",
+        )
+    else:
+        logger.info("Space-Track ingest disabled (no SPACETRACK_USER/SPACETRACK_PASSWORD)")
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
@@ -84,6 +107,8 @@ app.include_router(ingest.router)
 app.include_router(tiles.router)
 app.include_router(events.router)
 app.include_router(launches.router)
+app.include_router(reentries.router)
+app.include_router(constellations.router)
 
 
 @app.get("/")

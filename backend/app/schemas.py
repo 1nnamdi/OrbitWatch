@@ -112,3 +112,72 @@ class LaunchIngestResult(BaseModel):
     fetched: int
     created: int
     updated: int
+
+
+class ReentryPredictionOut(BaseModel):
+    norad_id: int
+    object_name: str
+    intl_des: str | None
+    rcs_size: str | None
+    country: str | None
+    msg_epoch: datetime
+    decay_epoch: datetime
+    source: str | None
+    msg_type: str
+
+    model_config = {"from_attributes": True}
+
+
+class DecayTrendOut(BaseModel):
+    norad_id: int
+    name: str
+    group_name: str
+    epoch: datetime
+    sma_km: float
+    perigee_km: float
+    apogee_km: float
+    bstar: float
+    points: int
+    decay_rate_km_day: float
+    est_days_left: float | None
+    est_reentry: datetime | None
+
+
+class ConstellationSummary(BaseModel):
+    prefix: str
+    label: str
+    total: int
+    on_orbit: int
+    decayed: int
+
+
+class GrowthPoint(BaseModel):
+    month: str  # YYYY-MM
+    launched: int
+    decayed: int
+    on_orbit: int
+
+
+class ConstellationGrowthOut(BaseModel):
+    prefix: str
+    label: str
+    points: list[GrowthPoint]
+
+
+class SpaceTrackIngestResult(BaseModel):
+    satcat_rows: int
+    decay_rows: int
+
+
+class BackfillRequest(BaseModel):
+    group: str | None = None
+    norad_ids: list[int] | None = None
+    days: int = 14
+    max_satellites: int = 500
+
+
+class BackfillResult(BaseModel):
+    satellites: int
+    requests: int
+    new_tles: int
+    events_created: int

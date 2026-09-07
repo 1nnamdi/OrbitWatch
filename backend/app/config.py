@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     celestrak_groups: str = "stations,active"
     ingest_interval_hours: float = 2.0
     launches_interval_hours: float = 1.0  # LL2 free tier: 15 req/hour
+    spacetrack_user: str = ""
+    spacetrack_password: str = ""
+    spacetrack_interval_hours: float = 12.0  # satcat guidance: query at most daily
     cors_origins: str = "http://localhost:5173"
 
     @property

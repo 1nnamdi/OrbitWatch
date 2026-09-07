@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, func
+from sqlalchemy import Date, DateTime, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -86,4 +86,46 @@ class Launch(Base):
     pad_lon: Mapped[float | None]
     image_url: Mapped[str | None] = mapped_column(String(300))
     last_updated: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SatCatEntry(Base):
+    """Space-Track satellite catalog metadata (full catalog incl. decayed objects)."""
+
+    __tablename__ = "satcat"
+
+    norad_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    object_name: Mapped[str] = mapped_column(String(64), index=True)
+    object_id: Mapped[str | None] = mapped_column(String(16))  # intl designator
+    object_type: Mapped[str | None] = mapped_column(String(16), index=True)
+    country: Mapped[str | None] = mapped_column(String(16))
+    launch_date: Mapped[date | None] = mapped_column(Date, index=True)
+    decay_date: Mapped[date | None] = mapped_column(Date, index=True)
+    launch_site: Mapped[str | None] = mapped_column(String(16))
+    rcs_size: Mapped[str | None] = mapped_column(String(8))
+    period_min: Mapped[float | None]
+    inclination_deg: Mapped[float | None]
+    apogee_km: Mapped[float | None]
+    perigee_km: Mapped[float | None]
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DecayPrediction(Base):
+    """Space-Track TIP / decay messages (predicted and historical re-entries)."""
+
+    __tablename__ = "decay_predictions"
+    __table_args__ = (
+        UniqueConstraint("norad_id", "msg_epoch", "msg_type", name="uq_decay_norad_msg"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    norad_id: Mapped[int] = mapped_column(index=True)  # no FK: object may be untracked by us
+    object_name: Mapped[str] = mapped_column(String(64))
+    intl_des: Mapped[str | None] = mapped_column(String(16))
+    rcs_size: Mapped[str | None] = mapped_column(String(8))
+    country: Mapped[str | None] = mapped_column(String(16))
+    msg_epoch: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    decay_epoch: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    source: Mapped[str | None] = mapped_column(String(16))
+    msg_type: Mapped[str] = mapped_column(String(16))
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
