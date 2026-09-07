@@ -4,6 +4,7 @@ import { api } from "./api";
 import GlobePage from "./pages/GlobePage";
 import MapPage from "./pages/MapPage";
 import PassesPage from "./pages/PassesPage";
+import EventsPage from "./pages/EventsPage";
 
 export default function App() {
   const { data: stats } = useQuery({ queryKey: ["stats"], queryFn: api.stats });
@@ -15,6 +16,7 @@ export default function App() {
         <NavLink to="/globe">Globe</NavLink>
         <NavLink to="/map">Ground Track</NavLink>
         <NavLink to="/passes">Passes</NavLink>
+        <NavLink to="/events">Events</NavLink>
         {stats && (
           <span className="stats">
             {stats.satellites.toLocaleString()} satellites · {stats.tles.toLocaleString()} TLEs
@@ -27,6 +29,7 @@ export default function App() {
           <Route path="/globe" element={<GlobePage />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/passes" element={<PassesPage />} />
+          <Route path="/events" element={<EventsPage />} />
         </Routes>
       </div>
     </>

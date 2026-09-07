@@ -67,3 +67,23 @@ class IngestResult(BaseModel):
     group: str
     satellites: int
     new_tles: int
+
+
+class EventOut(BaseModel):
+    id: int
+    norad_id: int
+    name: str
+    group_name: str
+    epoch_before: datetime
+    epoch_after: datetime
+    gap_hours: float
+    delta_sma_km: float
+    delta_inclination_deg: float
+    delta_eccentricity: float
+    score: float
+    detected_at: datetime
+
+
+class AnalyzeResult(BaseModel):
+    pairs_checked: int
+    events_created: int

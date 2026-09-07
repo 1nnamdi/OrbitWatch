@@ -5,9 +5,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import ingest, satellites, tiles
+from .api import events, ingest, satellites, tiles
 from .config import settings
 from .db import SessionLocal
+from .services import maneuvers
 from .sources import celestrak
 
 logging.basicConfig(level=logging.INFO)
@@ -23,6 +24,13 @@ def scheduled_ingest():
             logger.exception("Scheduled ingest failed for group=%s", group)
         finally:
             db.close()
+    db = SessionLocal()
+    try:
+        maneuvers.analyze_new_tles(db)
+    except Exception:
+        logger.exception("Maneuver analysis failed")
+    finally:
+        db.close()
 
 
 @asynccontextmanager
@@ -52,6 +60,7 @@ app.add_middleware(
 app.include_router(satellites.router)
 app.include_router(ingest.router)
 app.include_router(tiles.router)
+app.include_router(events.router)
 
 
 @app.get("/")

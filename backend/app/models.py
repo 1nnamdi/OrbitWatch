@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+
 from .db import Base
 
 
@@ -33,3 +34,34 @@ class TLE(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     satellite: Mapped[Satellite] = relationship(back_populates="tles")
+
+
+class OrbitalEvent(Base):
+    __tablename__ = "orbital_events"
+    __table_args__ = (
+        UniqueConstraint("norad_id", "epoch_after", name="uq_event_norad_epoch_after"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    norad_id: Mapped[int] = mapped_column(
+        ForeignKey("satellites.norad_id", ondelete="CASCADE"), index=True
+    )
+    epoch_before: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    epoch_after: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    gap_hours: Mapped[float]
+    delta_sma_km: Mapped[float]
+    delta_inclination_deg: Mapped[float]
+    delta_eccentricity: Mapped[float]
+    score: Mapped[float]
+    detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    satellite: Mapped[Satellite] = relationship()
+
+
+class AnalysisState(Base):
+    """Single-row watermark: highest tle_history.id already analyzed."""
+
+    __tablename__ = "analysis_state"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    last_tle_id: Mapped[int] = mapped_column(server_default="0")

@@ -42,7 +42,7 @@ Build the pipeline once for satellites, then reuse it for each new domain.
 | ✅ | Click-to-inspect satellite details | Click any globe dot → full panel: live telemetry, identity, orbital elements, TLE epoch (also on map page) |
 | 🔲 | Space-Track.org integration | Free account; richer history, decay/re-entry data |
 | 🔲 | Launch tracker (Launch Library 2 API) | Upcoming launches feed |
-| 🔲 | Maneuver/anomaly detection | Diff TLE history — spot spy sat maneuvers |
+| ✅ | Maneuver/anomaly detection | Diffs consecutive TLEs (ΔSMA/Δinc/Δecc), `orbital_events` table, /api/events + Events UI page; runs after each ingest |
 | 🔲 | Re-entry prediction dashboard | Decay trends |
 | 🔲 | Constellation growth visualizer | Starlink et al. over time |
 
@@ -109,6 +109,7 @@ Build the pipeline once for satellites, then reuse it for each new domain.
 ## Working Notes
 
 - 2026-09-07: Phase 0 + most of Phase 1 built and verified end-to-end. Backend on :8800 (docs at /docs), 16k sats ingested, ISS position/passes verified. Frontend on :5173 (globe / ground track / passes all working). Corporate-network workarounds: backend tile proxy (`/api/tiles`) because content filter blocks direct tile <img> loads; globe textures self-hosted in `frontend/public/textures/`.
+- 2026-09-07: Maneuver detection live. Thresholds (v1, in `services/maneuvers.py`): |ΔSMA| > 0.5 km, |Δinc| > 0.01°, |Δecc| > 1e-4; SMA increases weighted 2× (drag only lowers orbits); pairs with epoch gap > 30 d skipped. Watermark on `tle_history.id` in `analysis_state`. Verified with synthetic ISS TLE (Δinc +0.05° → score 10.85 HIGH). Real events will appear as history accumulates (ISS reboosts every few weeks). Tune thresholds after ~1 week of data.
 
 ### How to run
 

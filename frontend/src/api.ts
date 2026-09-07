@@ -55,6 +55,21 @@ export interface Stats {
   groups: string[];
 }
 
+export interface OrbitalEvent {
+  id: number;
+  norad_id: number;
+  name: string;
+  group_name: string;
+  epoch_before: string;
+  epoch_after: string;
+  gap_hours: number;
+  delta_sma_km: number;
+  delta_inclination_deg: number;
+  delta_eccentricity: number;
+  score: number;
+  detected_at: string;
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`/api${path}`);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -71,5 +86,7 @@ export const api = {
     get<GroundTrack>(`/satellites/${noradId}/groundtrack?minutes=${minutes}`),
   passes: (noradId: number, lat: number, lon: number, hours = 48) =>
     get<Passes>(`/satellites/${noradId}/passes?lat=${lat}&lon=${lon}&hours=${hours}`),
+  events: (minScore?: number, limit = 200) =>
+    get<OrbitalEvent[]>(`/events?limit=${limit}${minScore ? `&min_score=${minScore}` : ""}`),
   stats: () => get<Stats>("/stats"),
 };
